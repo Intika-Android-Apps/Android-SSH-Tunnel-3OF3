@@ -358,24 +358,36 @@ public class SSHTunnel extends PreferenceActivity implements
 		return false;
 	}
 
-	private void loadNetworkList() {
-		WifiManager wm = (WifiManager) this
-				.getSystemService(Context.WIFI_SERVICE);
-		List<WifiConfiguration> wcs = wm.getConfiguredNetworks();
-		String[] ssidEntries = new String[wcs.size() + 3];
-		ssidEntries[0] = Constraints.WIFI_AND_3G;
-		ssidEntries[1] = Constraints.ONLY_WIFI;
-		ssidEntries[2] = Constraints.ONLY_3G;
-		int n = 3;
-		for (WifiConfiguration wc : wcs) {
-			if (wc != null && wc.SSID != null)
-				ssidEntries[n++] = wc.SSID.replace("\"", "");
-			else
-				ssidEntries[n++] = "unknown";
-		}
-		ssidListPreference.setEntries(ssidEntries);
-		ssidListPreference.setEntryValues(ssidEntries);
-	}
+    private void loadNetworkList() {
+        WifiManager wm = (WifiManager) this
+                .getSystemService(Context.WIFI_SERVICE);
+        List<WifiConfiguration> wcs = wm.getConfiguredNetworks();
+        String[] ssidEntries = null;
+        int n = 3;
+
+        if (wcs == null) {
+            ssidEntries = new String[n];
+
+            ssidEntries[0] = Constraints.WIFI_AND_3G;
+            ssidEntries[1] = Constraints.ONLY_WIFI;
+            ssidEntries[2] = Constraints.ONLY_3G;
+        } else {
+            ssidEntries = new String[wcs.size() + n];
+
+            ssidEntries[0] = Constraints.WIFI_AND_3G;
+            ssidEntries[1] = Constraints.ONLY_WIFI;
+            ssidEntries[2] = Constraints.ONLY_3G;
+
+            for (WifiConfiguration wc : wcs) {
+                if (wc != null && wc.SSID != null)
+                    ssidEntries[n++] = wc.SSID;
+                else
+                    ssidEntries[n++] = "unknown";
+            }
+        }
+        ssidListPreference.setEntries(ssidEntries);
+        ssidListPreference.setEntryValues(ssidEntries);
+    }
 
 	private void loadProfileList() {
 

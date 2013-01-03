@@ -893,7 +893,7 @@ public class SSHTunnelService extends Service implements ServerHostKeyVerifier,
 		notification.setLatestEventInfo(this, getString(R.string.app_name)
 				+ " | " + Utils.getProfileName(profile), info, pendIntent);
 		notificationManager.cancel(1);
-		startForegroundCompat(1, notification);
+		startForeground(1, notification);
 	}
 
 	private void notifyAlert(String title, String info, int flags) {
@@ -947,7 +947,7 @@ public class SSHTunnelService extends Service implements ServerHostKeyVerifier,
 
 		isStopping = true;
 
-		stopForegroundCompat(1);
+		stopForeground(true);
 
 		FlurryAgent.onEndSession(this);
 
@@ -1053,36 +1053,11 @@ public class SSHTunnelService extends Service implements ServerHostKeyVerifier,
 			public void run() {
 
 				handler.sendEmptyMessage(MSG_CONNECT_START);
-				isConnecting = true;
 
 				enableDNSProxy = profile.isDNSProxy();
 
-				try {
-					URL url = new URL("http://gae-ip-country.appspot.com/");
-					HttpURLConnection conn = (HttpURLConnection) url
-							.openConnection();
-					conn.setConnectTimeout(2000);
-					conn.setReadTimeout(5000);
-					conn.connect();
-					InputStream is = conn.getInputStream();
-					BufferedReader input = new BufferedReader(
-							new InputStreamReader(is));
-					String code = input.readLine();
-					if (code != null && code.length() > 0 && code.length() < 3) {
-						Log.d(TAG, "Location: " + code);
-						if (!code.contains("CN") && !code.contains("ZZ"))
-							enableDNSProxy = false;
-					}
-				} catch (Exception e) {
-					Log.d(TAG, "Cannot get country code");
-					// Nothing
-				}
-
 				if (enableDNSProxy) {
 					if (dnsServer == null) {
-						// dnsServer = new DNSServer("DNS Server", "8.8.4.4",
-						// 53,
-						// SSHTunnelService.this);
 						dnsServer = new DNSServer("DNS Server", "127.0.0.1",
 								8053, SSHTunnelService.this);
 						dnsServer.setBasePath("/data/data/org.sshtunnel");
@@ -1164,50 +1139,6 @@ public class SSHTunnelService extends Service implements ServerHostKeyVerifier,
 				responses[i] = profile.getPassword();
 		}
 		return responses;
-	}
-
-	/**
-	 * This is a wrapper around the new startForeground method, using the older
-	 * APIs if it is not available.
-	 */
-	void startForegroundCompat(int id, Notification notification) {
-		// If we have the new startForeground API, then use it.
-		if (mStartForeground != null) {
-			mStartForegroundArgs[0] = Integer.valueOf(id);
-			mStartForegroundArgs[1] = notification;
-			invokeMethod(mStartForeground, mStartForegroundArgs);
-			return;
-		}
-
-		// Fall back on the old API.
-		setForeground(true);
-		notificationManager.notify(id, notification);
-	}
-
-	/**
-	 * This is a wrapper around the new stopForeground method, using the older
-	 * APIs if it is not available.
-	 */
-	void stopForegroundCompat(int id) {
-		// If we have the new stopForeground API, then use it.
-		if (mStopForeground != null) {
-			mStopForegroundArgs[0] = Boolean.TRUE;
-			try {
-				mStopForeground.invoke(this, mStopForegroundArgs);
-			} catch (InvocationTargetException e) {
-				// Should not happen.
-				Log.w("ApiDemos", "Unable to invoke stopForeground", e);
-			} catch (IllegalAccessException e) {
-				// Should not happen.
-				Log.w("ApiDemos", "Unable to invoke stopForeground", e);
-			}
-			return;
-		}
-
-		// Fall back on the old API. Note to cancel BEFORE changing the
-		// foreground state, since we could be killed at that point.
-		notificationManager.cancel(id);
-		setForeground(false);
 	}
 
 	public void stopReconnect(SimpleDateFormat df) {

@@ -63,7 +63,7 @@ public class SSHTunnelReceiver {
 		}
 
 		if (profile.isAutoConnect() || enable) {
-			
+
 			Utils.notifyConnect();
 
 			Intent it = new Intent(context, SSHTunnelService.class);
