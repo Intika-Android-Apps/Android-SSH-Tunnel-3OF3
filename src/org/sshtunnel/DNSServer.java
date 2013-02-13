@@ -26,7 +26,6 @@ class DnsResponse implements Serializable {
     private static final long serialVersionUID = -6693216674221293274L;
     private String request = null;
     private long timestamp = System.currentTimeMillis();
-    ;
     private int reqTimes = 0;
     private byte[] dnsResponse = null;
 
@@ -219,7 +218,6 @@ public class DNSServer implements WrapServer {
 
         byte[] result = new byte[start];
         System.arraycopy(response, 0, result, 0, start);
-        Log.d(TAG, "DNS Response package size: " + start);
 
         return result;
     }
@@ -333,11 +331,10 @@ public class DNSServer implements WrapServer {
                     InetAddress.getByName("127.0.0.1"));
             inService = true;
             srvPort = srvSocket.getLocalPort();
-            Log.e(TAG, this.name + "启动于端口： " + srvPort);
         } catch (SocketException e) {
-            Log.e(TAG, "DNSServer初始化错误，端口号" + srvPort, e);
+            Log.e(TAG, "DNSServer init error: " + srvPort, e);
         } catch (UnknownHostException e) {
-            Log.e(TAG, "DNSServer初始化错误，端口号" + srvPort, e);
+            Log.e(TAG, "DNSServer init error: " + srvPort, e);
         }
         return srvPort;
     }
@@ -370,7 +367,7 @@ public class DNSServer implements WrapServer {
             for (DnsResponse resp : dnsCache.values()) {
                 // 检查缓存时效(五天)
                 if ((System.currentTimeMillis() - resp.getTimestamp()) > 432000000L) {
-                    Log.d(TAG, "删除" + resp.getRequest() + "记录");
+                    Log.d(TAG, "Delete " + resp.getRequest());
                     tmpCache.remove(resp.getRequest());
                 }
             }
@@ -490,8 +487,6 @@ public class DNSServer implements WrapServer {
             url = "http://gaednsproxy1.appspot.com:" + dnsPort + "/?d="
                     + encode_host;
 
-        Log.d(TAG, "DNS Relay URL: " + url);
-
         try {
             URL aURL = new URL(url);
             HttpURLConnection conn = (HttpURLConnection) aURL.openConnection();
@@ -545,31 +540,25 @@ public class DNSServer implements WrapServer {
                 // 尝试从缓存读取域名解析
                 final String questDomain = getRequestDomain(udpreq);
 
-                Log.d(TAG, "解析" + questDomain);
+                Log.d(TAG, "Resolve: " + questDomain);
 
                 if (dnsCache.containsKey(questDomain)) {
 
                     sendDns(dnsCache.get(questDomain).getDnsResponse(), dnsq,
                             srvSocket);
 
-                    Log.d(TAG, "命中缓存");
-
                 } else if (orgCache.containsKey(questDomain)) { // 如果为自定义域名解析
                     byte[] ips = parseIPString(orgCache.get(questDomain));
                     byte[] answer = createDNSResponse(udpreq, ips);
                     addToCache(questDomain, answer);
                     sendDns(answer, dnsq, srvSocket);
-                    Log.d(TAG, "自定义解析" + orgCache);
                 } else if (questDomain.toLowerCase().contains("appspot.com")) { // for
                     // gaednsproxy.appspot.com
                     byte[] ips = parseIPString("127.0.0.1");
                     byte[] answer = createDNSResponse(udpreq, ips);
                     addToCache(questDomain, answer);
                     sendDns(answer, dnsq, srvSocket);
-                    Log.d(TAG, "Custom DNS resolver gaednsproxy.appspot.com");
-
                 } else {
-
                     synchronized (this) {
                         if (domains.contains(questDomain))
                             continue;
@@ -580,6 +569,7 @@ public class DNSServer implements WrapServer {
                     while (threadNum >= MAX_THREAD_NUM) {
                         Thread.sleep(2000);
                     }
+
                     threadNum++;
                     new Thread() {
                         @Override
@@ -591,15 +581,13 @@ public class DNSServer implements WrapServer {
                                 if (answer != null && answer.length != 0) {
                                     addToCache(questDomain, answer);
                                     sendDns(answer, dnsq, srvSocket);
-                                    Log.d(TAG,
-                                            "正确返回DNS解析，长度："
-                                                    + answer.length
-                                                    + "  耗时："
-                                                    + (System
-                                                    .currentTimeMillis() - startTime)
-                                                    / 1000 + "s");
+                                    Log.d(TAG, "DNS response，length："
+                                            + answer.length
+                                            + "  cost："
+                                            + (System.currentTimeMillis() - startTime)
+                                            / 1000 + "s");
                                 } else {
-                                    Log.e(TAG, "返回DNS包长为0");
+                                    Log.e(TAG, "DNS Packet size is zero");
                                 }
                             } catch (Exception e) {
                                 // Nothing
@@ -612,17 +600,6 @@ public class DNSServer implements WrapServer {
                     }.start();
 
                 }
-
-				/* For test, validate dnsCache */
-				/*
-				 * if (dnsCache.size() > 0) { Log.d(TAG, "Domains in cache:");
-				 * 
-				 * Enumeration<String> enu = dnsCache.keys(); while
-				 * (enu.hasMoreElements()) { String domain = (String)
-				 * enu.nextElement(); DnsResponse resp = dnsCache.get(domain);
-				 * 
-				 * Log.d(TAG, domain + " : " + resp.getIPString()); } }
-				 */
 
             } catch (IOException e) {
                 Log.e(TAG, "IO Exception", e);
